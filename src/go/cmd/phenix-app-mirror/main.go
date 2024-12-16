@@ -359,7 +359,8 @@ func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
 		name := util.RandomString(15)
 
 		cfg := MirrorConfig{MirrorName: name, MirrorBridge: amd.MirrorBridge, IP: ip.String()}
-
+		log.Info("---> mirror config: %v", cfg)
+		log.Info("---> experiment name: %v", exp.Spec.ExperimentName())
 		status.Mirrors[host.Hostname()] = cfg
 
 		for h := range cluster {
