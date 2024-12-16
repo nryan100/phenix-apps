@@ -52,9 +52,9 @@ func (this *MirrorAppMetadataV1) Init() {
 		this.MirrorNet += "/24" // default to class C network
 	}
 
-	// if this.MirrorBridge == "" {
-	// 	this.MirrorBridge = "phenix"
-	// }
+	if this.MirrorBridge == "" {
+		this.MirrorBridge = "default"
+	}
 
 	if this.MirrorVLAN == "" {
 		this.MirrorVLAN = "mirror"
