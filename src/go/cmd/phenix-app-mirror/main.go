@@ -159,6 +159,7 @@ func configure(exp *types.Experiment) error {
 
 		// No matter what, set the IP for the configured interface, even if it was
 		// already set in the topology.
+		log.Info("---> configure stage bridge: %v", amd.MirrorBridge)
 		iface.SetBridge(amd.MirrorBridge)
 		iface.SetProto("static")
 		iface.SetAddress(ip.String())
@@ -232,6 +233,7 @@ func preStart(exp *types.Experiment, dryrun bool) error {
 	for _, cfg := range status.Mirrors {
 		// Ignoring errors here since in most cases all the mirrors would have
 		// already been removed when the previous experiment was stopped.
+		log.Info("---> preStart stage bridge case deleteMirror: %v", cfg.MirrorBridge)
 		deleteMirror(cfg.MirrorName, cfg.MirrorBridge, cluster)
 	}
 
@@ -275,6 +277,7 @@ func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
 
 		// clean up any mirrors already created for this mirror
 		for _, mirror := range status.Mirrors {
+			log.Info("---> postStart stage bridge case deleteMirror: %v", mirror.MirrorBridge)
 			deleteMirror(mirror.MirrorName, mirror.MirrorBridge, cluster)
 		}
 	}()
@@ -359,7 +362,7 @@ func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
 		name := util.RandomString(15)
 
 		cfg := MirrorConfig{MirrorName: name, MirrorBridge: amd.MirrorBridge, IP: ip.String()}
-		log.Info("---> mirror config: %v", cfg)
+		log.Info("---> mirror config from postStart: %v", cfg)
 		log.Info("---> experiment name: %v", exp.Spec.ExperimentName())
 		status.Mirrors[host.Hostname()] = cfg
 
@@ -376,12 +379,14 @@ func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
 						`ovs-vsctl add-port %s %s -- set interface %s type=erspan options:remote_ip=%s options:erspan_ver=%d options:erspan_idx=%d`,
 						amd.MirrorBridge, name, name, ip, amd.ERSPAN.Version, amd.ERSPAN.Index,
 					)
+					log.Info("---> postStart stage bridge case ERSPAN V1: %v", amd.MirrorBridge)
 				case 2:
 					// Create ERSPAN v2 tunnel to target VM
 					cmd = fmt.Sprintf(
 						`ovs-vsctl add-port %s %s -- set interface %s type=erspan options:remote_ip=%s options:erspan_ver=%d options:erspan_dir=%d options:erspan_hwid=%d`,
 						amd.MirrorBridge, name, name, ip, amd.ERSPAN.Version, amd.ERSPAN.Direction, amd.ERSPAN.HardwareID,
 					)
+					log.Info("---> postStart stage bridge case ERSPAN V2: %v", amd.MirrorBridge)
 				default:
 					return fmt.Errorf("unknown ERSPAN version (%d) configured for %s", amd.ERSPAN.Version, host.Hostname())
 				}
@@ -401,6 +406,7 @@ func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
 					`ovs-vsctl add-port %s %s -- set interface %s type=gre options:remote_ip=%s`,
 					amd.MirrorBridge, name, name, ip,
 				)
+				log.Info("---> postStart stage bridge case ERSPAN disabled: %v", amd.MirrorBridge)
 
 				if dryrun {
 					log.Debug("[DRYRUN] GRE tunnel command: %s", cmd)
@@ -445,6 +451,7 @@ func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
 			// building the mirror command uses info about VMs actually deployed
 			if !dryrun {
 				// Create mirror, using GRE tunnel as the output port
+				log.Info("---> postStart command running buildMirrorCommand: %v", amd.MirrorBridge)
 				command = buildMirrorCommand(exp, name, amd.MirrorBridge, name, vms, hmd)
 
 				if command == nil {
@@ -494,6 +501,7 @@ func cleanup(exp *types.Experiment, dryrun bool) error {
 	}
 
 	for _, cfg := range status.Mirrors {
+		log.Info("---> cleanup stage deleteMirror bridge: %v", amd.MirrorBridge)
 		if err := deleteMirror(cfg.MirrorName, cfg.MirrorBridge, cluster); err != nil {
 			log.Error("removing mirror %s from cluster: %v", cfg.MirrorName, err)
 		}
