@@ -110,6 +110,7 @@ func main() {
 }
 
 func configure(exp *types.Experiment) error {
+	log.Info(">>> default bridge %v at configure stage", exp.Spec.DefaultBridge())
 	app := util.ExtractApp(exp.Spec.Scenario(), "mirror")
 
 	amd, err := extractMetadata(app.Metadata())
@@ -176,6 +177,7 @@ func configure(exp *types.Experiment) error {
 }
 
 func preStart(exp *types.Experiment, dryrun bool) error {
+	log.Info(">>> default bridge %v at preStart stage", exp.Spec.DefaultBridge())
 	app := util.ExtractApp(exp.Spec.Scenario(), "mirror")
 	startupDir := exp.Spec.BaseDir() + "/startup"
 
@@ -246,6 +248,7 @@ func preStart(exp *types.Experiment, dryrun bool) error {
 }
 
 func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
+	log.Info(">>> default bridge %v at postStart stage", exp.Spec.DefaultBridge())
 	app := util.ExtractApp(exp.Spec.Scenario(), "mirror")
 
 	amd, err := extractMetadata(app.Metadata())
@@ -480,6 +483,7 @@ func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
 }
 
 func cleanup(exp *types.Experiment, dryrun bool) error {
+	log.Info(">>> default bridge %v at cleanup stage", exp.Spec.DefaultBridge())
 	// cleanup is not needed if this is a dry run
 	if dryrun {
 		log.Debug("[DRYRUN] skipping cleanup code")
