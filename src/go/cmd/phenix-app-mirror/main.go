@@ -114,7 +114,8 @@ func configure(exp *types.Experiment) error {
 	app := util.ExtractApp(exp.Spec.Scenario(), "mirror")
 
 	amd, err := extractMetadata(app.Metadata())
-	amd.MirrorBridge = exp.Spec.ExperimentName()
+	// amd.MirrorBridge = exp.Spec.ExperimentName() 
+	amd.MirrorBridge = exp.Spec.DefaultBridge() // RENAME HERE
 	if err != nil {
 		return fmt.Errorf("extracting app metadata: %w", err)
 	}
@@ -237,7 +238,8 @@ func preStart(exp *types.Experiment, dryrun bool) error {
 		// Ignoring errors here since in most cases all the mirrors would have
 		// already been removed when the previous experiment was stopped.
 		log.Info("---> preStart stage bridge case deleteMirror: %v", cfg.MirrorBridge)
-		deleteMirror(cfg.MirrorName, cfg.MirrorBridge, cluster)
+		// deleteMirror(cfg.MirrorName, cfg.MirrorBridge, cluster) // RENAME BRIDGE
+		deleteMirror(cfg.MirrorName, exp.Spec.DefaultBridge(), cluster)
 	}
 
 	// Ignoring errors here since in most cases all the taps would have already
@@ -252,7 +254,8 @@ func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
 	app := util.ExtractApp(exp.Spec.Scenario(), "mirror")
 
 	amd, err := extractMetadata(app.Metadata())
-	amd.MirrorBridge = exp.Spec.ExperimentName()
+	// amd.MirrorBridge = exp.Spec.ExperimentName() // RENAME BRIDGE
+	amd.MirrorBridge = exp.Spec.DefaultBridge()
 	if err != nil {
 		return fmt.Errorf("extracting app metadata: %w", err)
 	}
@@ -283,7 +286,7 @@ func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
 		// clean up any mirrors already created for this mirror
 		for _, mirror := range status.Mirrors {
 			log.Info("---> postStart stage bridge case deleteMirror: %v", mirror.MirrorBridge)
-			deleteMirror(mirror.MirrorName, mirror.MirrorBridge, cluster)
+			deleteMirror(mirror.MirrorName, mirror.MirrorBridge, cluster) // RENAMED ABOVE
 		}
 	}()
 
@@ -493,7 +496,8 @@ func cleanup(exp *types.Experiment, dryrun bool) error {
 	app := util.ExtractApp(exp.Spec.Scenario(), "mirror")
 
 	amd, err := extractMetadata(app.Metadata())
-	amd.MirrorBridge = exp.Spec.ExperimentName()
+	// amd.MirrorBridge = exp.Spec.ExperimentName()
+	amd.MirrorBridge = exp.Spec.DefaultBridge() // RENAME HERE
 	if err != nil {
 		return fmt.Errorf("extracting app metadata: %w", err)
 	}
