@@ -53,7 +53,7 @@ func (this *MirrorAppMetadataV1) Init() {
 	}
 
 	// if this.MirrorBridge == "" {
-	this.MirrorBridge = "phenix"
+	this.MirrorBridge = "ieee13"
 	// }
 
 	if this.MirrorVLAN == "" {
