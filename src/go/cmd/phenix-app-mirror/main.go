@@ -110,12 +110,12 @@ func main() {
 }
 
 func configure(exp *types.Experiment) error {
-	log.Info(">>> default bridge %v at configure stage", exp.Spec.DefaultBridge())
+	log.Info(">>> default bridge %v at configure stage", exp.Spec.ExperimentName())
 	app := util.ExtractApp(exp.Spec.Scenario(), "mirror")
 
 	amd, err := extractMetadata(app.Metadata())
-	amd.MirrorBridge = "ieee13"
-	// amd.MirrorBridge = exp.Spec.DefaultBridge() // RENAME
+	amd.MirrorBridge = exp.Spec.ExperimentName()
+
 	if err != nil {
 		return fmt.Errorf("extracting app metadata: %w", err)
 	}
@@ -178,7 +178,7 @@ func configure(exp *types.Experiment) error {
 }
 
 func preStart(exp *types.Experiment, dryrun bool) error {
-	log.Info(">>> default bridge %v at preStart stage", exp.Spec.DefaultBridge())
+	log.Info(">>> default bridge %v at preStart stage", exp.Spec.ExperimentName())
 	app := util.ExtractApp(exp.Spec.Scenario(), "mirror")
 	startupDir := exp.Spec.BaseDir() + "/startup"
 
@@ -239,7 +239,7 @@ func preStart(exp *types.Experiment, dryrun bool) error {
 		// already been removed when the previous experiment was stopped.
 		log.Info("---> preStart stage bridge case deleteMirror: %v", cfg.MirrorBridge)
 		// deleteMirror(cfg.MirrorName, cfg.MirrorBridge, cluster) // RENAME
-		deleteMirror(cfg.MirrorName, exp.Spec.DefaultBridge(), cluster)
+		deleteMirror(cfg.MirrorName, exp.Spec.ExperimentName(), cluster)
 	}
 
 	// Ignoring errors here since in most cases all the taps would have already
@@ -250,12 +250,11 @@ func preStart(exp *types.Experiment, dryrun bool) error {
 }
 
 func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
-	log.Info(">>> default bridge %v at postStart stage", exp.Spec.DefaultBridge())
+	log.Info(">>> default bridge %v at postStart stage", exp.Spec.ExperimentName())
 	app := util.ExtractApp(exp.Spec.Scenario(), "mirror")
 
 	amd, err := extractMetadata(app.Metadata())
-	amd.MirrorBridge = "ieee13"
-	// amd.MirrorBridge = exp.Spec.DefaultBridge()
+	amd.MirrorBridge = exp.Spec.ExperimentName()
 	if err != nil {
 		return fmt.Errorf("extracting app metadata: %w", err)
 	}
@@ -486,7 +485,7 @@ func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
 }
 
 func cleanup(exp *types.Experiment, dryrun bool) error {
-	log.Info(">>> default bridge %v at cleanup stage", exp.Spec.DefaultBridge())
+	log.Info(">>> default bridge %v at cleanup stage", exp.Spec.ExperimentName())
 	// cleanup is not needed if this is a dry run
 	if dryrun {
 		log.Debug("[DRYRUN] skipping cleanup code")
@@ -496,9 +495,8 @@ func cleanup(exp *types.Experiment, dryrun bool) error {
 	app := util.ExtractApp(exp.Spec.Scenario(), "mirror")
 
 	amd, err := extractMetadata(app.Metadata())
-	// amd.MirrorBridge = exp.Spec.ExperimentName()
-	amd.MirrorBridge = "ieee13"
-	// amd.MirrorBridge = exp.Spec.DefaultBridge() // RENAME
+	amd.MirrorBridge = exp.Spec.ExperimentName()
+
 	if err != nil {
 		return fmt.Errorf("extracting app metadata: %w", err)
 	}
