@@ -177,7 +177,7 @@ func configure(exp *types.Experiment) error {
 	return nil
 }
 
-func preStart(exp *types.Experiment, dryrun bool) error 
+func preStart(exp *types.Experiment, dryrun bool) error {
 	log.Info(">>> default bridge %v at preStart stage", exp.Spec.ExperimentName())
 	app := util.ExtractApp(exp.Spec.Scenario(), "mirror")
 	startupDir := exp.Spec.BaseDir() + "/startup"
