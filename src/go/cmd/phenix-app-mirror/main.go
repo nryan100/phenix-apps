@@ -29,6 +29,7 @@ import (
 var templates embed.FS
 
 func main() {
+	panic("this is a test to see if any of my chagnes are going through")
 	util.SetupLogging()
 
 	if len(os.Args) != 2 {
