@@ -29,7 +29,6 @@ import (
 var templates embed.FS
 
 func main() {
-	panic("this is a test to see if any of my chagnes are going through")
 	util.SetupLogging()
 
 	if len(os.Args) != 2 {
@@ -38,7 +37,7 @@ func main() {
 
 	var (
 		stage  = os.Args[1]
-		// dryrun = util.IsDryRun()
+		dryrun = util.IsDryRun()
 	)
 
 	if stage == "version" {
@@ -80,27 +79,27 @@ func main() {
 		log.Fatal("initializing store: %w", err)
 	}
 
-	// switch stage {
-	// case "configure":
-	// 	if err := configure(exp); err != nil {
-	// 		log.Fatal("failed to execute configure stage: %v", err)
-	// 	}
-	// case "pre-start":
-	// 	if err := preStart(exp, dryrun); err != nil {
-	// 		log.Fatal("failed to execute pre-start stage: %v", err)
-	// 	}
-	// case "post-start":
-	// 	if err := postStart(exp, dryrun); err != nil {
-	// 		log.Fatal("failed to execute post-start stage: %v", err)
-	// 	}
-	// case "cleanup":
-	// 	if err := cleanup(exp, dryrun); err != nil {
-	// 		log.Fatal("failed to execute cleanup stage: %v", err)
-	// 	}
-	// default:
-	// 	fmt.Print(string(body))
-	// 	return
-	// }
+	switch stage {
+	case "configure":
+		if err := configure(exp); err != nil {
+			log.Fatal("failed to execute configure stage: %v", err)
+		}
+	case "pre-start":
+		if err := preStart(exp, dryrun); err != nil {
+			log.Fatal("failed to execute pre-start stage: %v", err)
+		}
+	case "post-start":
+		if err := postStart(exp, dryrun); err != nil {
+			log.Fatal("failed to execute post-start stage: %v", err)
+		}
+	case "cleanup":
+		if err := cleanup(exp, dryrun); err != nil {
+			log.Fatal("failed to execute cleanup stage: %v", err)
+		}
+	default:
+		fmt.Print(string(body))
+		return
+	}
 
 	body, err = json.Marshal(exp)
 	if err != nil {
