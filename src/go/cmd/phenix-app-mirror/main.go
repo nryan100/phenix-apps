@@ -114,8 +114,8 @@ func configure(exp *types.Experiment) error {
 	app := util.ExtractApp(exp.Spec.Scenario(), "mirror")
 
 	amd, err := extractMetadata(app.Metadata())
-	// amd.MirrorBridge = exp.Spec.ExperimentName()
-	amd.MirrorBridge = "ieee13"
+	amd.MirrorBridge = exp.Spec.ExperimentName()
+	
 
 	if err != nil {
 		return fmt.Errorf("extracting app metadata: %w", err)
@@ -255,8 +255,8 @@ func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
 	app := util.ExtractApp(exp.Spec.Scenario(), "mirror")
 
 	amd, err := extractMetadata(app.Metadata())
-	// amd.MirrorBridge = exp.Spec.ExperimentName()
-	amd.MirrorBridge = "ieee13"
+	amd.MirrorBridge = exp.Spec.ExperimentName()
+	
 	if err != nil {
 		return fmt.Errorf("extracting app metadata: %w", err)
 	}
@@ -497,8 +497,7 @@ func cleanup(exp *types.Experiment, dryrun bool) error {
 	app := util.ExtractApp(exp.Spec.Scenario(), "mirror")
 
 	amd, err := extractMetadata(app.Metadata())
-	// amd.MirrorBridge = exp.Spec.ExperimentName()
-	amd.MirrorBridge = "ieee13"
+	amd.MirrorBridge = exp.Spec.ExperimentName()
 
 	if err != nil {
 		return fmt.Errorf("extracting app metadata: %w", err)
