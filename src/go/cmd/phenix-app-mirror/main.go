@@ -127,6 +127,7 @@ func configure(exp *types.Experiment) error {
 	// work our way backwards, and the cluster hosts will be addressed at the
 	// beginning of the network range forward.
 	ip := nw.Range().To().Prior()
+	log.Info("---> IP selected %v", ip )
 
 	for _, host := range app.Hosts() {
 		hmd, err := extractHostMetadata(host.Metadata())
@@ -159,6 +160,7 @@ func configure(exp *types.Experiment) error {
 
 		// No matter what, set the IP for the configured interface, even if it was
 		// already set in the topology.
+		log.Info("---> configure stage bridge: %v", amd.MirrorBridge)
 		iface.SetBridge(amd.MirrorBridge)
 		iface.SetProto("static")
 		iface.SetAddress(ip.String())
@@ -232,7 +234,8 @@ func preStart(exp *types.Experiment, dryrun bool) error {
 	for _, cfg := range status.Mirrors {
 		// Ignoring errors here since in most cases all the mirrors would have
 		// already been removed when the previous experiment was stopped.
-		deleteMirror(cfg.MirrorName, cfg.MirrorBridge, cluster)
+		log.Info("---> preStart stage bridge case deleteMirror: %v", cfg.MirrorBridge)
+		deleteMirror(cfg.MirrorName, cfg.MirrorBridge, cluster) // RENAME
 	}
 
 	// Ignoring errors here since in most cases all the taps would have already
@@ -275,6 +278,7 @@ func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
 
 		// clean up any mirrors already created for this mirror
 		for _, mirror := range status.Mirrors {
+			log.Info("---> postStart stage bridge case deleteMirror: %v", mirror.MirrorBridge)
 			deleteMirror(mirror.MirrorName, mirror.MirrorBridge, cluster)
 		}
 	}()
@@ -359,7 +363,7 @@ func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
 		name := util.RandomString(15)
 
 		cfg := MirrorConfig{MirrorName: name, MirrorBridge: amd.MirrorBridge, IP: ip.String()}
-
+		log.Info("---> mirror config from postStart: %v", cfg)
 		status.Mirrors[host.Hostname()] = cfg
 
 		for h := range cluster {
@@ -375,12 +379,14 @@ func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
 						`ovs-vsctl add-port %s %s -- set interface %s type=erspan options:remote_ip=%s options:erspan_ver=%d options:erspan_idx=%d`,
 						amd.MirrorBridge, name, name, ip, amd.ERSPAN.Version, amd.ERSPAN.Index,
 					)
+					log.Info("---> postStart stage bridge case ERSPAN V1 command - %v", cmd)
 				case 2:
 					// Create ERSPAN v2 tunnel to target VM
 					cmd = fmt.Sprintf(
 						`ovs-vsctl add-port %s %s -- set interface %s type=erspan options:remote_ip=%s options:erspan_ver=%d options:erspan_dir=%d options:erspan_hwid=%d`,
 						amd.MirrorBridge, name, name, ip, amd.ERSPAN.Version, amd.ERSPAN.Direction, amd.ERSPAN.HardwareID,
 					)
+					log.Info("---> postStart stage bridge case ERSPAN V2: command - %v", cmd)
 				default:
 					return fmt.Errorf("unknown ERSPAN version (%d) configured for %s", amd.ERSPAN.Version, host.Hostname())
 				}
@@ -400,6 +406,7 @@ func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
 					`ovs-vsctl add-port %s %s -- set interface %s type=gre options:remote_ip=%s`,
 					amd.MirrorBridge, name, name, ip,
 				)
+				log.Info("---> postStart stage bridge case ERSPAN disabled command - %v", cmd)
 
 				if dryrun {
 					log.Debug("[DRYRUN] GRE tunnel command: %s", cmd)
@@ -444,6 +451,7 @@ func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
 			// building the mirror command uses info about VMs actually deployed
 			if !dryrun {
 				// Create mirror, using GRE tunnel as the output port
+				log.Info("---> postStart command running buildMirrorCommand: %v", amd.MirrorBridge)
 				command = buildMirrorCommand(exp, name, amd.MirrorBridge, name, vms, hmd)
 
 				if command == nil {
@@ -493,11 +501,12 @@ func cleanup(exp *types.Experiment, dryrun bool) error {
 	}
 
 	for _, cfg := range status.Mirrors {
+		log.Info("---> cleanup stage attempting deleteMirror w args mirror name: %v, bridge: %v, cluster: %v", cfg.MirrorName, cfg.MirrorBridge, cluster)
 		if err := deleteMirror(cfg.MirrorName, cfg.MirrorBridge, cluster); err != nil {
 			log.Error("removing mirror %s from cluster: %v", cfg.MirrorName, err)
 		}
 	}
-
+	log.Info("---> cleanup stage attempting deleteTap w args tap name: %v, metadata name: %v, cluster: %v", status.TapName, exp.Metadata.Name, cluster)
 	if err := deleteTap(status.TapName, exp.Metadata.Name, cluster); err != nil {
 		log.Error("deleting tap %s from cluster: %v", status.TapName, err)
 	}
@@ -509,6 +518,7 @@ func deleteTap(name, exp string, cluster map[string][]string) error {
 	var errs error
 
 	for host := range cluster {
+		log.Info("---> deleteTapFromHost attempt w args name: %v exp: %v host: %v", name, exp, host)
 		errs = multierror.Append(errs, deleteTapFromHost(name, exp, host))
 	}
 
@@ -516,7 +526,7 @@ func deleteTap(name, exp string, cluster map[string][]string) error {
 }
 
 func deleteTapFromHost(name, exp, host string) error {
-	log.Info("deleting mirror tap %s on host %s", name, host)
+	log.Info("---> deleting mirror tap %s on host %s", name, host)
 
 	opts := []mm.TapOption{
 		mm.TapHost(host), mm.TapNS(exp),
@@ -531,6 +541,7 @@ func deleteTapFromHost(name, exp, host string) error {
 }
 
 func deleteMirror(mirror, bridge string, cluster map[string][]string) error {
+	log.Info("---> deleteMirror w args mirror: %v, bridge: %v, cluster: %v", mirror, bridge, cluster)
 	var errs error
 
 	for host := range cluster {
@@ -541,7 +552,7 @@ func deleteMirror(mirror, bridge string, cluster map[string][]string) error {
 }
 
 func deleteMirrorFromHost(mirror, bridge, host string) error {
-	log.Info("deleting mirror %s on bridge %s from host %s", mirror, bridge, host)
+	log.Info("---> deleting mirror %s on bridge %s from host %s", mirror, bridge, host)
 
 	var errs error
 
@@ -549,12 +560,14 @@ func deleteMirrorFromHost(mirror, bridge, host string) error {
 		`ovs-vsctl -- --id=@m get mirror %s -- remove bridge %s mirrors @m`,
 		mirror, bridge,
 	)
+	log.Info("---> deleteMirrorFromHost cmd: %v", cmd)
 
 	if err := mm.MeshShell(host, cmd); err != nil {
 		errs = multierror.Append(errs, fmt.Errorf("removing mirror %s from bridge %s on cluster host %s: %v", mirror, bridge, host, err))
 	}
 
 	cmd = fmt.Sprintf(`ovs-vsctl del-port %s %s`, bridge, mirror)
+	log.Info("---> deleteMirrorFromHost cmd: %v", cmd)
 
 	if err := mm.MeshShell(host, cmd); err != nil {
 		errs = multierror.Append(errs, fmt.Errorf("deleting GRE tunnel %s from bridge %s on cluster host %s: %v", mirror, bridge, host, err))
@@ -648,6 +661,7 @@ func buildMirrorCommand(exp *types.Experiment, name, bridge, port string, vms []
 	command = append(command, fmt.Sprintf(`--id=@m create mirror name=%s select-dst-port=%s select-vlan=%s output-port=@o`, name, strings.Join(ids, ","), strings.Join(vlans, ",")))
 	command = append(command, fmt.Sprintf(`add bridge %s mirrors @m`, bridge))
 
+	log.Info("---> buildMirrorCommand cmd: %v", command)
 	return command
 }
 
