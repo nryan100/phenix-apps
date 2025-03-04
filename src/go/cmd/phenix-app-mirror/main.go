@@ -81,21 +81,27 @@ func main() {
 
 	switch stage {
 	case "configure":
+		log.Info("---> default bridge: %v before configure", exp.Spec.DefaultBridge())
 		if err := configure(exp); err != nil {
 			log.Fatal("failed to execute configure stage: %v", err)
 		}
+		log.Info("---> default bridge: %v after configure", exp.Spec.DefaultBridge())
 	// case "pre-start":
 	// 	if err := preStart(exp, dryrun); err != nil {
 	// 		log.Fatal("failed to execute pre-start stage: %v", err)
 	// 	}
 	case "post-start":
+		log.Info("---> default bridge: %v before post-start", exp.Spec.DefaultBridge())
 		if err := postStart(exp, dryrun); err != nil {
 			log.Fatal("failed to execute post-start stage: %v", err)
 		}
+		log.Info("---> default bridge: %v after post-start", exp.Spec.DefaultBridge())
 	case "cleanup":
+		log.Info("---> default bridge: %v before cleanup", exp.Spec.DefaultBridge())
 		if err := cleanup(exp, dryrun); err != nil {
 			log.Fatal("failed to execute cleanup stage: %v", err)
 		}
+		log.Info("---> default bridge: %v after cleanup", exp.Spec.DefaultBridge())
 	default:
 		fmt.Print(string(body))
 		return
