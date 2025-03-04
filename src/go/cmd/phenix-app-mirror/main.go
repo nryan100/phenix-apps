@@ -84,10 +84,10 @@ func main() {
 		if err := configure(exp); err != nil {
 			log.Fatal("failed to execute configure stage: %v", err)
 		}
-	case "pre-start":
-		if err := preStart(exp, dryrun); err != nil {
-			log.Fatal("failed to execute pre-start stage: %v", err)
-		}
+	// case "pre-start":
+	// 	if err := preStart(exp, dryrun); err != nil {
+	// 		log.Fatal("failed to execute pre-start stage: %v", err)
+	// 	}
 	case "post-start":
 		if err := postStart(exp, dryrun); err != nil {
 			log.Fatal("failed to execute post-start stage: %v", err)
