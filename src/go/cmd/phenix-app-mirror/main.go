@@ -147,6 +147,7 @@ func configure(exp *types.Experiment) error {
 		var iface ifaces.NodeNetworkInterface
 
 		for _, i := range node.Network().Interfaces() {
+			log.Info("---> node has network interface(s): %v", node.Network().Interfaces())
 			if i.Name() == hmd.Interface {
 				iface = i
 				break
@@ -168,6 +169,7 @@ func configure(exp *types.Experiment) error {
 		iface.SetGateway("") // just in case it was set in the topology...
 		iface.SetVLAN(amd.MirrorVLAN)
 
+		log.Info("---> iface created for node: %v", iface)
 		// Decrement IP for next target VM.
 		ip = ip.Prior()
 	}
