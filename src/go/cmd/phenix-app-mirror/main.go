@@ -86,10 +86,10 @@ func main() {
 			log.Fatal("failed to execute configure stage: %v", err)
 		}
 		log.Info("---> default bridge: %v after configure", exp.Spec.DefaultBridge())
-	// case "pre-start":
-	// 	if err := preStart(exp, dryrun); err != nil {
-	// 		log.Fatal("failed to execute pre-start stage: %v", err)
-	// 	}
+	case "pre-start":
+		if err := preStart(exp, dryrun); err != nil {
+			log.Fatal("failed to execute pre-start stage: %v", err)
+		}
 	case "post-start":
 		log.Info("---> default bridge: %v before post-start", exp.Spec.DefaultBridge())
 		if err := postStart(exp, dryrun); err != nil {
