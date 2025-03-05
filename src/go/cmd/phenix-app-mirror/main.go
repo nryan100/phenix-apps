@@ -122,7 +122,8 @@ func configure(exp *types.Experiment) error {
 	if err != nil {
 		return fmt.Errorf("extracting app metadata: %w", err)
 	}
-
+	amd.Init()
+	log.Info("---> bridge at configure stage: %v", amd.MirrorBridge)
 	nw, err := mirrorNet(&amd)
 	if err != nil {
 		return fmt.Errorf("determining mirror network: %w", err)
@@ -260,6 +261,8 @@ func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
 	if err != nil {
 		return fmt.Errorf("extracting app metadata: %w", err)
 	}
+	amd.Init()
+	log.Info("---> bridge at postStart stage: %v", amd.MirrorBridge)
 
 	nw, err := mirrorNet(&amd)
 	if err != nil {
@@ -459,8 +462,8 @@ func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
 			// building the mirror command uses info about VMs actually deployed
 			if !dryrun {
 				// Create mirror, using GRE tunnel as the output port
-				log.Info("---> postStart command running buildMirrorCommand: %v", amd.MirrorBridge)
 				command = buildMirrorCommand(exp, name, amd.MirrorBridge, name, vms, hmd)
+				log.Info("---> postStart command running buildMirrorCommand: %v", command)
 
 				if command == nil {
 					// Likely means no VMs scheduled on this cluster host have interfaces in
@@ -498,8 +501,8 @@ func cleanup(exp *types.Experiment, dryrun bool) error {
 	if err != nil {
 		return fmt.Errorf("extracting app metadata: %w", err)
 	}
-
 	amd.Init()
+	log.Info("---> bridge at cleanup stage: %v", amd.MirrorBridge)
 
 	cluster := cluster(exp)
 
