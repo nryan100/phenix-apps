@@ -2,10 +2,10 @@ module phenix-apps
 
 go 1.20
 
-replace phenix => github.com/sandialabs/sceptre-phenix/src/go v0.0.0-20230726231243-4754da61aae8
+replace phenix => github.com/sandialabs/sceptre-phenix/src/go v0.0.0-20250228200416-4b27dea19734
 
 require (
-	github.com/activeshadow/libminimega v0.0.0-20190412123224-5384445d4b63
+	github.com/activeshadow/libminimega v0.0.0-20230607190319-9d6487572f76
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/mitchellh/mapstructure v1.4.0
 	inet.af/netaddr v0.0.0-20220617031823-097006376321
@@ -27,6 +27,7 @@ require (
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/invopop/yaml v0.1.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
+	github.com/lmittmann/tint v0.3.4 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.11 // indirect
@@ -42,10 +43,10 @@ require (
 	go.uber.org/zap v1.15.0 // indirect
 	go4.org/intern v0.0.0-20211027215823-ae77deb06f29 // indirect
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20230525183740-e7c30c78aeb2 // indirect
-	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e // indirect
-	golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f // indirect
-	golang.org/x/sys v0.0.0-20211019181941-9d821ace8654 // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1 // indirect
+	golang.org/x/net v0.1.0 // indirect
+	golang.org/x/sys v0.1.0 // indirect
+	golang.org/x/text v0.4.0 // indirect
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
 	google.golang.org/grpc v1.27.0 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect

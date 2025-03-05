@@ -133,7 +133,7 @@ func configure(exp *types.Experiment) error {
 	// work our way backwards, and the cluster hosts will be addressed at the
 	// beginning of the network range forward.
 	ip := nw.Range().To().Prior()
-	log.Info("---> IP selected %v", ip )
+	log.Info("---> IP selected %v", ip)
 
 	for _, host := range app.Hosts() {
 		hmd, err := extractHostMetadata(host.Metadata())
@@ -592,7 +592,7 @@ func mirrorNet(md *MirrorAppMetadataV1) (netaddr.IPPrefix, error) {
 		return netaddr.IPPrefix{}, fmt.Errorf("parsing mirror net: %w", err)
 	}
 
-	running, err := types.RunningExperiments()
+	running, err := runningExperiments()
 	if err != nil {
 		// Log the error, but don't escalate it. Instead, just assume there's no
 		// other experiments running and let things (potentially) fail
@@ -713,4 +713,26 @@ func vlanTaps(ns string, vms, vlans []string) []string {
 	}
 
 	return taps
+}
+
+func runningExperiments() ([]*types.Experiment, error) {
+	configs, err := store.List("Experiment")
+	if err != nil {
+		return nil, fmt.Errorf("getting list of experiment configs from store: %w", err)
+	}
+
+	var experiments []*types.Experiment
+
+	for _, c := range configs {
+		exp, err := types.DecodeExperimentFromConfig(c) // hack this
+		if err != nil {
+			return nil, fmt.Errorf("decoding experiment %s from config: %w", c.Metadata.Name, err)
+		}
+
+		if exp.Running() {
+			experiments = append(experiments, exp)
+		}
+	}
+
+	return experiments, nil
 }
