@@ -123,6 +123,7 @@ func configure(exp *types.Experiment) error {
 		return fmt.Errorf("extracting app metadata: %w", err)
 	}
 	amd.Init()
+	amd.MirrorBridge = exp.Spec.DefaultBridge()
 	log.Info("---> bridge at configure stage: %v", amd.MirrorBridge)
 	nw, err := mirrorNet(&amd)
 	if err != nil {
@@ -262,6 +263,7 @@ func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
 		return fmt.Errorf("extracting app metadata: %w", err)
 	}
 	amd.Init()
+	amd.MirrorBridge = exp.Spec.DefaultBridge()
 	log.Info("---> bridge at postStart stage: %v", amd.MirrorBridge)
 
 	nw, err := mirrorNet(&amd)
@@ -502,6 +504,7 @@ func cleanup(exp *types.Experiment, dryrun bool) error {
 		return fmt.Errorf("extracting app metadata: %w", err)
 	}
 	amd.Init()
+	amd.MirrorBridge = exp.Spec.DefaultBridge()
 	log.Info("---> bridge at cleanup stage: %v", amd.MirrorBridge)
 
 	cluster := cluster(exp)
