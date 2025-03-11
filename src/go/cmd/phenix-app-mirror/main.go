@@ -550,18 +550,15 @@ func deleteMirrorFromHost(mirror, bridge, host string) error {
 	)
 
 	if err := mm.MeshShell(host, cmd); err != nil {
-		log.Info(">>> (1) after cmd %v errors: %v", cmd, err)
 		errs = multierror.Append(errs, fmt.Errorf("removing mirror %s from bridge %s on cluster host %s: %v", mirror, bridge, host, err))
 	}
 
 	cmd = fmt.Sprintf(`ovs-vsctl del-port %s %s`, bridge, mirror)
 
 	if err := mm.MeshShell(host, cmd); err != nil {
-		log.Info(">>> (2) after cmd %v errors: %v", cmd, err)
 		errs = multierror.Append(errs, fmt.Errorf("deleting GRE tunnel %s from bridge %s on cluster host %s: %v", mirror, bridge, host, err))
 	}
 
-	log.Info(">>> (after all commands) errors from deleteMirrorFromHost: %v", errs)
 	return errs
 }
 
