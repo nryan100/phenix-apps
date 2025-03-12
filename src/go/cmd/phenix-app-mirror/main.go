@@ -120,7 +120,6 @@ func configure(exp *types.Experiment) error {
 	if amd.MirrorBridge == "REPLACE-THIS" || amd.MirrorBridge == "phenix" {
 		amd.MirrorBridge = exp.Spec.DefaultBridge()
 	}
-	log.Info("--> mirrorBridge after check (configure) %v", amd.MirrorBridge)
 
 	nw, err := mirrorNet(&amd)
 	if err != nil {
@@ -258,7 +257,6 @@ func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
 	if amd.MirrorBridge == "REPLACE-THIS" || amd.MirrorBridge == "phenix" {
 		amd.MirrorBridge = exp.Spec.DefaultBridge()
 	}
-	log.Info("--> mirrorBridge after check (postStart) %v", amd.MirrorBridge)
 
 
 	nw, err := mirrorNet(&amd)
@@ -496,7 +494,6 @@ func cleanup(exp *types.Experiment, dryrun bool) error {
 	if amd.MirrorBridge == "REPLACE-THIS" || amd.MirrorBridge == "phenix" {
 		amd.MirrorBridge = exp.Spec.DefaultBridge()
 	}
-	log.Info("--> mirrorBridge after check (cleanup) %v", amd.MirrorBridge)
 
 	cluster := cluster(exp)
 
@@ -578,7 +575,6 @@ func mirrorNet(md *MirrorAppMetadataV1) (netaddr.IPPrefix, error) {
 	
 	subnet, err := netaddr.ParseIPPrefix(md.MirrorNet)
 	if err != nil {
-		log.Info("--> mirrorBridge after check (mirrorNet) %v", md.MirrorBridge)
 		return netaddr.IPPrefix{}, fmt.Errorf("parsing mirror net: %w", err)
 	}
 
