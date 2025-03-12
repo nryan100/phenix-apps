@@ -117,7 +117,9 @@ func configure(exp *types.Experiment) error {
 		return fmt.Errorf("extracting app metadata: %w", err)
 	}
 	amd.Init()
+	log.Info("--> mirrorBridge after init (configure) %v", amd.MirrorBridge)
 	amd.MirrorBridge = exp.Spec.DefaultBridge()
+
 	nw, err := mirrorNet(&amd)
 	if err != nil {
 		return fmt.Errorf("determining mirror network: %w", err)
@@ -251,6 +253,7 @@ func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
 		return fmt.Errorf("extracting app metadata: %w", err)
 	}
 	amd.Init()
+	log.Info("--> mirrorBridge after init (postStart) %v", amd.MirrorBridge)
 	amd.MirrorBridge = exp.Spec.DefaultBridge()
 
 	nw, err := mirrorNet(&amd)
@@ -485,6 +488,7 @@ func cleanup(exp *types.Experiment, dryrun bool) error {
 		return fmt.Errorf("extracting app metadata: %w", err)
 	}
 	amd.Init()
+	log.Info("--> mirrorBridge after init (cleanup) %v", amd.MirrorBridge)
 	amd.MirrorBridge = exp.Spec.DefaultBridge()
 
 	cluster := cluster(exp)
@@ -564,6 +568,7 @@ func deleteMirrorFromHost(mirror, bridge, host string) error {
 
 func mirrorNet(md *MirrorAppMetadataV1) (netaddr.IPPrefix, error) {
 	md.Init()
+	log.Info("--> mirrorBridge after init (mirrorNet) %v", md.MirrorBridge)
 
 	subnet, err := netaddr.ParseIPPrefix(md.MirrorNet)
 	if err != nil {
