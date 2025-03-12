@@ -117,7 +117,7 @@ func configure(exp *types.Experiment) error {
 		return fmt.Errorf("extracting app metadata: %w", err)
 	}
 	amd.Init()
-	if amd.MirrorBridge == "REPLACE-THIS" {
+	if amd.MirrorBridge == "REPLACE-THIS" || amd.MirrorBridge == "phenix" {
 		amd.MirrorBridge = exp.Spec.DefaultBridge()
 	}
 	log.Info("--> mirrorBridge after check (configure) %v", amd.MirrorBridge)
@@ -255,7 +255,7 @@ func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
 		return fmt.Errorf("extracting app metadata: %w", err)
 	}
 	amd.Init()
-	if amd.MirrorBridge == "REPLACE-THIS" {
+	if amd.MirrorBridge == "REPLACE-THIS" || amd.MirrorBridge == "phenix" {
 		amd.MirrorBridge = exp.Spec.DefaultBridge()
 	}
 	log.Info("--> mirrorBridge after check (postStart) %v", amd.MirrorBridge)
@@ -493,7 +493,7 @@ func cleanup(exp *types.Experiment, dryrun bool) error {
 		return fmt.Errorf("extracting app metadata: %w", err)
 	}
 	amd.Init()
-	if amd.MirrorBridge == "REPLACE-THIS" {
+	if amd.MirrorBridge == "REPLACE-THIS" || amd.MirrorBridge == "phenix" {
 		amd.MirrorBridge = exp.Spec.DefaultBridge()
 	}
 	log.Info("--> mirrorBridge after check (cleanup) %v", amd.MirrorBridge)
