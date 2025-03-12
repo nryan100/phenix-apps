@@ -117,8 +117,10 @@ func configure(exp *types.Experiment) error {
 		return fmt.Errorf("extracting app metadata: %w", err)
 	}
 	amd.Init()
-	log.Info("--> mirrorBridge after init (configure) %v", amd.MirrorBridge)
-	amd.MirrorBridge = exp.Spec.DefaultBridge()
+	if amd.MirrorBridge == "REPLACE-THIS" {
+		amd.MirrorBridge = exp.Spec.DefaultBridge()
+	}
+	log.Info("--> mirrorBridge after check (configure) %v", amd.MirrorBridge)
 
 	nw, err := mirrorNet(&amd)
 	if err != nil {
@@ -253,8 +255,11 @@ func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
 		return fmt.Errorf("extracting app metadata: %w", err)
 	}
 	amd.Init()
-	log.Info("--> mirrorBridge after init (postStart) %v", amd.MirrorBridge)
-	amd.MirrorBridge = exp.Spec.DefaultBridge()
+	if amd.MirrorBridge == "REPLACE-THIS" {
+		amd.MirrorBridge = exp.Spec.DefaultBridge()
+	}
+	log.Info("--> mirrorBridge after check (postStart) %v", amd.MirrorBridge)
+
 
 	nw, err := mirrorNet(&amd)
 	if err != nil {
@@ -488,8 +493,10 @@ func cleanup(exp *types.Experiment, dryrun bool) error {
 		return fmt.Errorf("extracting app metadata: %w", err)
 	}
 	amd.Init()
-	log.Info("--> mirrorBridge after init (cleanup) %v", amd.MirrorBridge)
-	amd.MirrorBridge = exp.Spec.DefaultBridge()
+	if amd.MirrorBridge == "REPLACE-THIS" {
+		amd.MirrorBridge = exp.Spec.DefaultBridge()
+	}
+	log.Info("--> mirrorBridge after check (cleanup) %v", amd.MirrorBridge)
 
 	cluster := cluster(exp)
 
@@ -568,10 +575,10 @@ func deleteMirrorFromHost(mirror, bridge, host string) error {
 
 func mirrorNet(md *MirrorAppMetadataV1) (netaddr.IPPrefix, error) {
 	md.Init()
-	log.Info("--> mirrorBridge after init (mirrorNet) %v", md.MirrorBridge)
-
+	
 	subnet, err := netaddr.ParseIPPrefix(md.MirrorNet)
 	if err != nil {
+		log.Info("--> mirrorBridge after check (mirrorNet) %v", md.MirrorBridge)
 		return netaddr.IPPrefix{}, fmt.Errorf("parsing mirror net: %w", err)
 	}
 
