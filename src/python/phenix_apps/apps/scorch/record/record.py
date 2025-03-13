@@ -67,3 +67,10 @@ class Record(ComponentBase):
                 
                 else:
                     self.print(f'record component \'arg\' {cmd.arg} for {vm.hostname} not defined, use \'start\' or \'stop\'')
+
+def main():
+    Record()
+
+
+if __name__ == '__main__':
+    main()
