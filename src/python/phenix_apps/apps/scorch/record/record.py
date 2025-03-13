@@ -1,0 +1,69 @@
+from datetime import datetime
+
+from phenix_apps.apps.scorch import ComponentBase
+from phenix_apps.common import utils
+
+# - name: test-record
+#   type: record
+#   metadata: 
+#       vms:
+#           - hostname: test-vm
+#             start:
+#               - args: start 
+#                 filename: my-file.fb
+#             stop:
+#               - args: stop
+#
+
+class Record(ComponentBase):
+    
+    def __init__(self):
+        ComponentBase.__init__(self, 'record')
+        self.execute_stage()
+    
+    def configure(self):
+        self.__run('configure')
+
+
+    def start(self):
+        self.__run('start')
+
+
+    def stop(self):
+        self.__run('stop')
+
+
+    def cleanup(self):
+        self.__run('cleanup')
+
+    
+    def __run(self, stage):
+        nodes = self.extract_node_names()
+        vms   = self.metadata.get('vms', [])
+
+        mm = self.mm_init()
+
+        for vm in vms:
+            if vm.hostname not in nodes:
+                self.eprint(f'{vm.hostname} is not in the topology')
+                continue
+            
+            commands = vm.get(stage, [])
+
+            if len(commands) == 0:
+                self.print(f'{vm.hostname} has no commands for stage {stage}')
+                continue
+            
+            for cmd in commands:
+                if cmd.arg == 'start':
+                    filename = cmd.get('filename', f"{vm.hostname}-{datetime.now().strftime("%Y%m%d-%H%M%S")}.fb")
+                    mm.vnc_record("fb", vm.hostname, filename)
+                    
+                    self.print(f'recording started for vm {vm.hostname}')
+                
+                if cmd.arg == 'stop':
+                    mm.vnc_stop(vm.hostname, "fb")
+                    self.print(f'recording stopped for vm {vm.hostname}')
+                
+                else:
+                    self.print(f'record component \'arg\' {cmd.arg} for {vm.hostname} not defined, use \'start\' or \'stop\'')
