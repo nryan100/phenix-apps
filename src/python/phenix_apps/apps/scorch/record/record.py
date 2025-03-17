@@ -56,7 +56,11 @@ class Record(ComponentBase):
             
             for cmd in commands:
                 if cmd.arg == 'start':
-                    filename = cmd.get('filename', f"{vm.hostname}-{datetime.now().strftime("%Y%m%d-%H%M%S")}.fb")
+                    filename = cmd.get('filename', None)
+                    if not filename:
+                        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+                        filename = f"{vm.hostname}_{timestamp}.fb"
+                        
                     mm.vnc_record("fb", vm.hostname, filename)
                     
                     self.print(f'recording started for vm {vm.hostname}')
