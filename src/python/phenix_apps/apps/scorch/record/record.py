@@ -60,10 +60,11 @@ class Record(ComponentBase):
                     if not filename:
                         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
                         filename = f"{vm.hostname}_{timestamp}.fb"
-                        
-                    mm.vnc_record("fb", vm.hostname, filename)
+                    filepath = f"{self.base_dir}/{filename}"
+
+                    mm.vnc_record("fb", vm.hostname, filepath)
                     
-                    self.print(f'recording started for vm {vm.hostname}')
+                    self.print(f'recording started for vm {vm.hostname}, saving to {filepath}')
                 
                 elif cmd.action == 'stop':
                     mm.vnc_stop(vm.hostname, "fb")
