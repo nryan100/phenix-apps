@@ -65,7 +65,7 @@ class Record(ComponentBase):
                     
                     self.print(f'recording started for vm {vm.hostname}')
                 
-                if cmd.action == 'stop':
+                elif cmd.action == 'stop':
                     mm.vnc_stop(vm.hostname, "fb")
                     self.print(f'recording stopped for vm {vm.hostname}')
                 
