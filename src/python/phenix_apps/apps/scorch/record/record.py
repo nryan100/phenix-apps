@@ -55,7 +55,7 @@ class Record(ComponentBase):
                 continue
             
             for cmd in commands:
-                if cmd.arg == 'start':
+                if cmd.action == 'start':
                     filename = cmd.get('filename', None)
                     if not filename:
                         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -65,7 +65,7 @@ class Record(ComponentBase):
                     
                     self.print(f'recording started for vm {vm.hostname}')
                 
-                if cmd.arg == 'stop':
+                if cmd.action == 'stop':
                     mm.vnc_stop(vm.hostname, "fb")
                     self.print(f'recording stopped for vm {vm.hostname}')
                 
