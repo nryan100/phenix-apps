@@ -3,18 +3,6 @@ from datetime import datetime
 from phenix_apps.apps.scorch import ComponentBase
 from phenix_apps.common import utils
 
-# - name: test-record
-#   type: record
-#   metadata: 
-#       vms:
-#           - hostname: test-vm
-#             start:
-#               - args: start 
-#                 filename: my-file.fb
-#             stop:
-#               - args: stop
-#
-
 class Record(ComponentBase):
     
     def __init__(self):
