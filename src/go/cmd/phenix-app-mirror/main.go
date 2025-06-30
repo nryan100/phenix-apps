@@ -118,10 +118,8 @@ func configure(exp *types.Experiment) error {
 	}
 	amd.Init()
 	if amd.MirrorBridge == "REPLACE-THIS" || amd.MirrorBridge == "phenix" {
-		log.Info("MirrorBridge set to DefaultBridge in configure")
 		amd.MirrorBridge = exp.Spec.DefaultBridge()
 	}
-	log.Info("MirrorBridge: %v & DefaultBridge: %v in ", amd.MirrorBridge, exp.Spec.DefaultBridge())
 
 	nw, err := mirrorNet(&amd)
 	if err != nil {
@@ -257,10 +255,8 @@ func postStart(exp *types.Experiment, dryrun bool) (ferr error) {
 	}
 	amd.Init()
 	if amd.MirrorBridge == "REPLACE-THIS" || amd.MirrorBridge == "phenix" {
-		log.Info("MirrorBridge set to DefaultBridge in postStart")
 		amd.MirrorBridge = exp.Spec.DefaultBridge()
 	}
-	log.Info("MirrorBridge: %v & DefaultBridge: %v in postStart", amd.MirrorBridge, exp.Spec.DefaultBridge())
 
 
 	nw, err := mirrorNet(&amd)
@@ -496,10 +492,8 @@ func cleanup(exp *types.Experiment, dryrun bool) error {
 	}
 	amd.Init()
 	if amd.MirrorBridge == "REPLACE-THIS" || amd.MirrorBridge == "phenix" {
-		log.Info("MirrorBridge set to DefaultBridge in cleanup")
 		amd.MirrorBridge = exp.Spec.DefaultBridge()
 	}
-	log.Info("MirrorBridge: %v & DefaultBridge: %v in cleanup", amd.MirrorBridge, exp.Spec.DefaultBridge())
 
 	cluster := cluster(exp)
 
