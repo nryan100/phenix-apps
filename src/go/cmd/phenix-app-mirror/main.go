@@ -235,7 +235,7 @@ func preStart(exp *types.Experiment, dryrun bool) error {
 	for _, cfg := range status.Mirrors {
 		// Ignoring errors here since in most cases all the mirrors would have
 		// already been removed when the previous experiment was stopped.
-		deleteMirror(cfg.MirrorName, cfg.MirrorBridge, cluster) // RENAME
+		deleteMirror(cfg.MirrorName, cfg.MirrorBridge, cluster)
 	}
 
 	// Ignoring errors here since in most cases all the taps would have already
