@@ -2,7 +2,6 @@ import copy
 import json
 import os
 import re
-import stat
 from typing import Optional, Dict
 
 from phenix_apps.apps import AppBase
@@ -16,15 +15,13 @@ class Sceptre(AppBase):
 
         self.eprint(self.stage)
 
-        self.startup_dir   = f"{self.exp_dir}/startup"
-        self.sceptre_dir   = f"{self.exp_dir}/sceptre"
-        self.analytics_dir = f"{self.exp_dir}/analytics"
-        self.elk_dir       = f"{self.analytics_dir}/elk"
+        self.startup_dir = f"{self.exp_dir}/startup"
+        self.sceptre_dir = f"{self.exp_dir}/sceptre"
+        self.elk_dir     = f"{self.exp_dir}/elk"
 
-        os.makedirs(self.startup_dir,   exist_ok=True)
-        os.makedirs(self.sceptre_dir,   exist_ok=True)
-        os.makedirs(self.analytics_dir, exist_ok=True)
-        os.makedirs(self.elk_dir,       exist_ok=True)
+        os.makedirs(self.startup_dir, exist_ok=True)
+        os.makedirs(self.sceptre_dir, exist_ok=True)
+        os.makedirs(self.elk_dir, exist_ok=True)
 
         self.mako_path = utils.abs_path(__file__, "templates")  # type: str
 
@@ -39,8 +36,26 @@ class Sceptre(AppBase):
         # Note, asset_dir must be declared in the scenario.yaml to work correctly
         overrideFile = f"{self.asset_dir}/injects/override/{filename}"
         if os.path.exists(overrideFile):
+            logger.log("INFO", f"Overriding '{filename}' with '{overrideFile}'")
             return {"src": overrideFile}
         return None
+
+    def render(self, template_name: str, file_path: str, **kwargs) -> str:
+        """
+        Render a Mako template from the templates dir
+        and write it to the specified file path.
+
+        If executable is true, change file mode to be executable.
+        """
+        with open(file_path, "w") as fp:
+            utils.mako_serve_template(
+                template_name=template_name,
+                templates_dir=self.mako_path,
+                filename=fp,
+                **kwargs
+            )
+
+        return file_path
 
     def render_sceptre_start(self, device, kwargs: dict):
         if not kwargs.get("name"):
@@ -60,12 +75,8 @@ class Sceptre(AppBase):
         )
 
         startup_file = f"{self.startup_dir}/{device.hostname}-start{ext}"
-
-        with open(startup_file, "w") as file_:
-            utils.mako_serve_template("sceptre_start.mako", self.mako_path, file_, **kwargs)
-
-        st_ = os.stat(startup_file)
-        os.chmod(startup_file, st_.st_mode | stat.S_IEXEC)
+        self.render("sceptre_start.mako", startup_file, **kwargs)
+        utils.mark_executable(startup_file)
 
     def configure(self):
         """
@@ -325,19 +336,21 @@ class Sceptre(AppBase):
         ######################## Provider configure ###################################
         providers = self.extract_nodes_type("provider")
         if not providers:
-            msg = "No SCEPTRE providers have been configured for this experiment."
+            msg = "No SCEPTRE providers have been configured for this experiment"
             logger.log("ERROR", msg)
-            raise error.AppError(msg)
+            raise error.AppError(msg) from None
 
         for provider in providers:
-            vm_directory = f"{self.sceptre_dir}/{provider.hostname}"
             if "metadata" not in provider:
-                msg = f"No metadata for {provider.hostname}"
-                logger.log("WARN", msg)
+                logger.log("WARN", f"No metadata for provider '{provider.hostname}', skipping...")
                 continue
 
-            # NOTE: simulator is considored case-sensitive in many places
+            vm_directory = f"{self.sceptre_dir}/{provider.hostname}"
+
+            # NOTE: names are case-sensitive, used here, in power_daemon.py in bennu, and in Phenix schemas
             simulator = provider.metadata.get("simulator", "")  # type: str
+            if not simulator:
+                logger.log("WARN", f"No simulator specified for provider '{provider.hostname}', will fall back to default config")
 
             # Create power world provider injections
             if simulator in ["PowerWorld", "PowerWorldHelics"]:
@@ -360,6 +373,7 @@ class Sceptre(AppBase):
                     "description": "PowerWorld objects",
                 })
                 self.add_inject(hostname=provider.hostname, inject=kwargs)
+
                 # case file
                 kwargs = {
                     "src": f"{provider.metadata.case}",
@@ -367,6 +381,7 @@ class Sceptre(AppBase):
                     "description": "PowerWorld binary file",
                 }
                 self.add_inject(hostname=provider.hostname, inject=kwargs)
+
                 # oneline file
                 kwargs = {
                     "src": f"{provider.metadata.oneline}",
@@ -443,7 +458,7 @@ class Sceptre(AppBase):
                     }
                     self.add_inject(hostname=provider.hostname, inject=kwargs)
 
-            # Create pypower provider injections
+            # Create PyPower provider injections
             elif simulator == "PyPower":
                 # config
                 kwargs = self.find_override(f"{provider.hostname}_config.ini")
@@ -471,7 +486,7 @@ class Sceptre(AppBase):
                     kwargs = {"src": f"{vm_directory}/config.ini"}
                 kwargs.update({
                     "dst": "/etc/sceptre/config.ini",
-                    "description": "vm_config",
+                    "description": "Provider config",
                 })
                 self.add_inject(hostname=provider.hostname, inject=kwargs)
 
@@ -521,15 +536,17 @@ class Sceptre(AppBase):
             # Create and write startup injection
             if bkr.topology.hardware.os_type == "linux":
                 loglevel = bkr.metadata.get('helics_broker_loglevel', 3) # 3 = summary
-                logfile = bkr.metadata.get('helics_broker_logfile',
-                        '/etc/sceptre/log/helics_broker.log')
+                logfile = bkr.metadata.get('helics_broker_logfile', '/etc/sceptre/log/helics_broker.log')
+
                 startup_file = f"{self.startup_dir}/{bkr.hostname}-helics.sh"
                 with open(startup_file, "w") as file_:
-                    file_.write(f"helics_broker --autorestart --ipv4 -f {len(feds)}"
-                                f" --logfile={logfile}"
-                                f" --fileloglevel={loglevel} &\n")
-                st_ = os.stat(startup_file)
-                os.chmod(startup_file, st_.st_mode | stat.S_IEXEC)
+                    file_.write(
+                        f"helics_broker --autorestart --ipv4 -f {len(feds)}"
+                        f" --logfile={logfile}"
+                        f" --fileloglevel={loglevel} &\n"
+                    )
+                utils.mark_executable(startup_file)
+
                 kwargs = self.find_override(f"{bkr.hostname}_helics.sh")
                 if kwargs is None:
                     kwargs = {"src": startup_file}
@@ -552,8 +569,8 @@ class Sceptre(AppBase):
                         "sleep 10s\nservice filebeat start\nservice"
                         " metricbeat start\nservice collectd start\n"
                     )
-                st_ = os.stat(startup_file)
-                os.chmod(startup_file, st_.st_mode | stat.S_IEXEC)
+                utils.mark_executable(startup_file)
+
                 kwargs = self.find_override(f"{vm.hostname}_elk-start.sh")
                 if kwargs is None:
                     kwargs = {"src": startup_file}
@@ -570,7 +587,7 @@ class Sceptre(AppBase):
         if len(elk) > 1:
             msg = "There are multiple ELK boxes defined for this SCEPTRE experiment"
             logger.log("ERROR", msg)
-            raise error.AppError(msg)
+            raise error.AppError(msg) from None
 
         if elk:
             injects = [
@@ -606,15 +623,11 @@ class Sceptre(AppBase):
 
         # Write sceptre startup script injections
         scheduler_file = f"{self.startup_dir}/sceptre-startup-scheduler.cmd"
-        scheduler_mako = "sceptre-startup-scheduler.mako"
-        with open(scheduler_file, "w") as file_:
-            utils.mako_serve_template(scheduler_mako, self.mako_path, file_)
+        self.render("sceptre-startup-scheduler.mako", scheduler_file)
         os.chmod(scheduler_file, 0o0777)
 
         startup_file = f"{self.startup_dir}/sceptre-startup.ps1"
-        startup_mako = "sceptre-startup.mako"
-        with open(startup_file, "w") as file_:
-            utils.mako_serve_template(startup_mako, self.mako_path, file_)
+        self.render("sceptre-startup.mako", startup_file)
         os.chmod(startup_file, 0o777)
 
         fd_configs = []
@@ -630,8 +643,7 @@ class Sceptre(AppBase):
 
         for provider in providers:
             if "metadata" not in provider:
-                msg = f"No metadata for {provider.hostname}"
-                logger.log("WARN", msg)
+                logger.log("WARN", f"No metadata for provider '{provider.hostname}', skipping...")
                 continue
 
             provider_map[provider.hostname] = provider
@@ -643,53 +655,87 @@ class Sceptre(AppBase):
             self.render_sceptre_start(
                 device=provider,
                 kwargs={
-                    "publish_endpoint": pub_endpoint,
                     "server_endpoint": srv_endpoint,
+                    "publish_endpoint": pub_endpoint,
                     # if ignition hmi is being used, provider needs to sleep
                     # labels: - ignition
                     "needsleep": True if self.extract_nodes_label("ignition") else False,
                 }
             )
 
-            # Write provider config file injections
+            simulator = provider.metadata.get("simulator", "")
+            if not simulator:
+                logger.log("WARN", f"No simulator specified for provider '{provider.hostname}'")
+
+            # Create provider config file directory
             provider_directory = f"{self.sceptre_dir}/{provider.hostname}"
             os.makedirs(provider_directory, exist_ok=True)
-            config_ini = f"{provider_directory}/config.ini"
-            case, oneline, pwds_endpoint = None, None, None
-            config_helics = None
 
-            simulator = provider.metadata.get("simulator", "")
-            if 'PowerWorld' in simulator:
+            # define a kwargs object, then pass to kwargs
+            kwargs = {
+                "solver": simulator,
+                "debug": str(provider.metadata.get("debug", False)).capitalize(),
+                "server_endpoint": srv_endpoint,
+                "publish_endpoint": pub_endpoint,
+            }
+
+            if "PowerWorld" in simulator:
                 objects_file_path = f"{provider_directory}/objects.txt"
-                case = "case.PWB"
-                oneline = "oneline.pwd"
+                kwargs["case_file"] = "case.PWB"
+                kwargs["oneline_file"] = "oneline.pwd"
                 # Adding HIL tags
                 hil_object_list = provider.metadata.get('hil_tags', [])
 
             if simulator == "PowerWorldDynamics":
-                pwds_endpoint = provider.metadata.get('pwds_endpoint', '127.0.0.1')
+                kwargs["pwds_endpoint"] = provider.metadata.get('pwds_endpoint', '127.0.0.1')
             elif simulator == "PyPower":
-                case = os.path.basename(provider.metadata.case)
+                kwargs["case_file"] = os.path.basename(provider.metadata.case)
             elif "Helics" in simulator:
-                win = "C:/sceptre/helics.json"
-                nix = "/etc/sceptre/helics.json"
-                config_helics = (
-                    nix if provider.topology.hardware.os_type == "linux" else win
-                )
+                if provider.topology.hardware.os_type == "linux":
+                    kwargs["config_helics"] = "/etc/sceptre/helics.json"
+                else:
+                    kwargs["config_helics"] = "C:/sceptre/helics.json"
 
-            with open(config_ini, "w") as file_:
-                utils.mako_serve_template(
-                    "provider_config.mako",
-                    self.mako_path,
-                    file_,
-                    solver=simulator,
-                    publish_endpoint=pub_endpoint,
-                    server_endpoint=srv_endpoint,
-                    case_file=case,
-                    oneline_file=oneline,
-                    pwds_endpoint=pwds_endpoint,
-                    config_helics=config_helics
-                )
+            if simulator in ["RTDS", "OPALRT"]:
+                # TODO: move YAML rendering to configure stage, so users can edit it
+                # by stopping experiments and not have sceptre.py overwrite it again.
+
+                # allow manual overriding of config via provider.metadata.config_file
+                # for example, a custom YAML file that was added via a separate injection
+                # WARNING: experiment metadata won't be added to this file
+                if provider.metadata.get("config_file"):
+                    kwargs["config_file"] = provider.metadata.config_file
+                else:
+                    local_path = f"{provider_directory}/{simulator.lower()}_config.yaml"
+                    kwargs["config_file"] = f"/etc/sceptre/{simulator.lower()}_config.yaml"  # This will be added to INI file
+
+                    if not provider.metadata.get("data_dir"):
+                        provider.metadata.data_dir = f"/root/{simulator.lower()}/"
+
+                    # add metadata to YAML
+                    provider.metadata.sceptre_topology = self.experiment.metadata.annotations.topology
+                    provider.metadata.sceptre_scenario = self.experiment.metadata.annotations.scenario
+                    provider.metadata.sceptre_experiment = self.exp_name
+                    provider.metadata.provider_hostname = provider.hostname
+                    provider.metadata.provider_ip = ipv4_address
+
+                    # write provider metadata to the yaml file (via Box.to_yaml())
+                    provider.metadata.to_yaml(filename=local_path)
+
+                    # add injection with the yaml file to injections
+                    self.add_inject(hostname=provider.hostname, inject={
+                        "src": local_path,
+                        "dst": kwargs["config_file"],
+                        "description": "YAML configuration file for Provider"
+                    })
+
+            # Generate ("render") the config.ini file for the provider
+            # TODO: only render this if there isn't a override file?
+            self.render(
+                "provider_config.mako",
+                f"{provider_directory}/config.ini",
+                **kwargs,
+            )
 
         ######################## Field-device pre-start ###################################
         fd_server_configs = {}
@@ -706,8 +752,7 @@ class Sceptre(AppBase):
             fd_counter += 1
 
             if not fd_.metadata:
-                msg = f"No metadata for {fd_.hostname}."
-                logger.log("WARN", msg)
+                logger.log("WARN", f"No metadata for fd-server '{fd_.hostname}'")
                 continue
 
             # get provider information
@@ -724,14 +769,15 @@ class Sceptre(AppBase):
                 subtype = fd_.metadata.get("subtype", "single")
                 parsed = SceptreMetadataParser(fd_.metadata)
 
-                if provider.metadata.get("simulator", "") in [
+                simulator = provider.metadata.get("simulator", "")
+                if simulator in [
                     'PowerWorld', 'PowerWorldHelics', 'PowerWorldDynamics', 'PyPower'
                 ]:
                     fd_objects = [x['name'] for _, v in parsed.devices_by_protocol.items() for x in v]
                     power_object_list.extend(fd_objects)
             except Exception as e:
-                msg = f"There was a problem parsing metadata for {fd_.hostname}.\nPROBLEM: {e}"
-                logger.log("WARN", msg)
+                msg = f"There was a problem parsing metadata for '{fd_.hostname}'.\nPROBLEM: {e}"
+                logger.log("ERROR", msg)
                 raise error.AppError(msg) from None
 
             fd_directory = f"{self.sceptre_dir}/{fd_.hostname}"
@@ -796,30 +842,28 @@ class Sceptre(AppBase):
             if 'sunspec' in parsed.devices_by_protocol:
                 sceptre_type = 'sunspec'
 
-            with open(config_file, "w") as file_:
-                if sceptre_type == 'sunspec':
-                    utils.mako_serve_template(
-                        "sunspec.mako",
-                        self.mako_path,
-                        file_,
-                        name=fd_config.name,
-                        cycle_time=fd_cycle_time,
-                        infra=fd_config.infrastructure_name,
-                        device=fd_config.protocols[0].devices[0],
-                        ipaddr=fd_config.ipaddr,
-                        publish_endpoint=fd_config.publish_endpoint,
-                        server_endpoint=fd_config.server_endpoint,
-                        devname=fd_config.protocols[0].devices[0].registers[0].devname,
-                    )
-                else:
-                    utils.mako_serve_template(
-                        "fd_server.mako",
-                        self.mako_path,
-                        file_,
-                        fd_config=fd_config,
-                        logic=fd_logic,
-                        cycle_time=fd_cycle_time,
-                    )
+            # Write fd server config file injection
+            if sceptre_type == 'sunspec':
+                self.render(
+                    "sunspec.mako",
+                    config_file,
+                    name=fd_config.name,
+                    cycle_time=fd_cycle_time,
+                    infra=fd_config.infrastructure_name,
+                    device=fd_config.protocols[0].devices[0],
+                    ipaddr=fd_config.ipaddr,
+                    publish_endpoint=fd_config.publish_endpoint,
+                    server_endpoint=fd_config.server_endpoint,
+                    devname=fd_config.protocols[0].devices[0].registers[0].devname,
+                )
+            else:
+                self.render(
+                    "fd_server.mako",
+                    config_file,
+                    fd_config=fd_config,
+                    logic=fd_logic,
+                    cycle_time=fd_cycle_time,
+                )
 
             self.render_sceptre_start(
                 device=fd_,
@@ -875,7 +919,7 @@ class Sceptre(AppBase):
         for fed in feds:
             vm_dir = f"{self.sceptre_dir}/{fed.hostname}"
             os.makedirs(vm_dir, exist_ok=True)
-            helics_config = f"{vm_dir}/helics.json"
+
             config = {}
             md = fed.metadata
             helics_md = md.get('helics', {})
@@ -970,13 +1014,9 @@ class Sceptre(AppBase):
                     for end in helics_md['endpoints'])
             # remove any empty config keys
             config = {k: v for k, v in config.items() if v}
-            with open(helics_config, "w") as file_:
-                utils.mako_serve_template(
-                    "helics_config.mako",
-                    self.mako_path,
-                    file_,
-                    config=config
-                )
+
+            # Generate config file
+            self.render("helics_config.mako", f"{vm_dir}/helics.json", config=config)
 
         # Write fd client file injections
         # type: fd-client
@@ -984,8 +1024,7 @@ class Sceptre(AppBase):
 
         for fd_ in fd_clients:
             if not fd_.metadata:
-                msg = f"No metadata for {fd_.hostname}."
-                logger.log("WARN", msg)
+                logger.log("WARN", f"No metadata for fd-client '{fd_.hostname}', skipping...")
                 continue
 
             fd_directory = f"{self.sceptre_dir}/{fd_.hostname}"
@@ -1012,16 +1051,13 @@ class Sceptre(AppBase):
                     server_configs.append(fd_server_configs[server])
 
             # Write fd client config file
-            config_file = f"{fd_directory}/config.xml"
-            with open(config_file, "w") as file_:
-                utils.mako_serve_template(
-                    "fd_client.mako",
-                    self.mako_path,
-                    file_,
-                    server_configs=server_configs,
-                    command_endpoint=fd_ip,
-                    name=fd_.hostname,
-                )
+            self.render(
+                "fd_client.mako",
+                f"{fd_directory}/config.xml",
+                server_configs=server_configs,
+                command_endpoint=fd_ip,
+                name=fd_.hostname,
+            )
 
             # Write fd client startup script injections
             self.render_sceptre_start(fd_, {"name": "field-device"})
@@ -1136,18 +1172,14 @@ class Sceptre(AppBase):
             fd_server_configs[fep_config.name] = fep_config
 
             # Write fep config file injection
-            config_file = f"{fd_directory}/config.xml"
-
-            with open(config_file, "w") as file_:
-                utils.mako_serve_template(
-                    "fep_template.mako",
-                    self.mako_path,
-                    file_,
-                    server_configs=server_configs,
-                    command_endpoint=cmd_ip,
-                    name=fd_.hostname,
-                    fep_config=fep_config,
-                )
+            self.render(
+                "fep_template.mako",
+                f"{fd_directory}/config.xml",
+                server_configs=server_configs,
+                command_endpoint=cmd_ip,
+                name=fd_.hostname,
+                fep_config=fep_config,
+            )
 
             # Write fep startup file injection
             self.render_sceptre_start(fd_, {"name": "field-device"})
@@ -1155,24 +1187,19 @@ class Sceptre(AppBase):
         ######################## ELK pre-start ###################################
         # Create elk files
         fdlist_file = f"{self.elk_dir}/fdlist.json"
-
         with open(fdlist_file, "w") as file_:
             json.dump(fdlist, file_)
-
-        st_ = os.stat(fdlist_file)
-        os.chmod(fdlist_file, st_.st_mode | stat.S_IEXEC)
+        utils.mark_executable(fdlist_file)
 
         # we already read in all the providers at the start so no need to re-read them
         for provider in providers:
-            provider_ip = provider.topology.network.interfaces[0].address
             provider_restart_file = f"{self.elk_dir}/sceptre_provider_restart.py"
-
-            with open(provider_restart_file, "w") as file_:
-                utils.mako_serve_template(
-                    "elk.mako", self.mako_path, file_, ip=provider_ip
-                )
-
-            os.chmod(provider_restart_file, st_.st_mode | stat.S_IEXEC)
+            self.render(
+                "elk.mako",
+                provider_restart_file,
+                ip=provider.topology.network.interfaces[0].address,
+            )
+            utils.mark_executable(provider_restart_file)
 
         gtmap = []
         for fd_config in fd_server_configs.values():
@@ -1191,7 +1218,6 @@ class Sceptre(AppBase):
                             )
 
         coil_data_file = f"{self.elk_dir}/reg_addrs.json"
-
         with open(coil_data_file, "w") as _file:
             json.dump(gtmap, _file)
 
@@ -1248,7 +1274,6 @@ class Sceptre(AppBase):
             opc_directory = f"{self.sceptre_dir}/{opc.hostname}"
             os.makedirs(opc_directory, exist_ok=True)
 
-            opc_file = f"{opc_directory}/opc.xml"
             opc_ifaces = []
             primary_opc = False
             for iface in opc.topology.network.interfaces:
@@ -1262,23 +1287,23 @@ class Sceptre(AppBase):
             if not re.search(r"secondary|bak", opc.hostname):
                 opc_configs[opc_ip] = opc_config
                 primary_opc = True
-            with open(opc_file, "w") as file_:
-                utils.mako_serve_template(
-                    "opc_template.mako", self.mako_path, file_, opc_config=opc_config
-                )
 
             # Write OPC config file injection
-            topserver_file = f"{opc_directory}/topserver.ps1"
-            with open(topserver_file, "w") as file_:
-                utils.mako_serve_template(
-                    "topserver.mako",
-                    self.mako_path,
-                    file_,
-                    scada_ips=scada_ips,
-                    historian_ips=historian_ips,
-                    opc_ip=opc_ip,
-                    primary_opc=primary_opc,
-                )
+            self.render(
+                "opc_template.mako",
+                f"{opc_directory}/opc.xml",
+                opc_config=opc_config,
+            )
+
+            # Generate Topserver automation script
+            self.render(
+                "topserver.mako",
+                f"{opc_directory}/topserver.ps1",
+                scada_ips=scada_ips,
+                historian_ips=historian_ips,
+                opc_ip=opc_ip,
+                primary_opc=primary_opc,
+            )
 
         ######################## SCADA server pre-start ###################################
         # No need to requery here, we already extracted scada-server
@@ -1287,10 +1312,7 @@ class Sceptre(AppBase):
             os.makedirs(scada_directory, exist_ok=True)
 
             # Write scada server startup script injection
-            scada_file = f"{scada_directory}/scada.ps1"
-            scada_mako = "scada.mako"
-            with open(scada_file, "w") as file_:
-                utils.mako_serve_template(scada_mako, self.mako_path, file_)
+            self.render("scada.mako", f"{scada_directory}/scada.ps1")
 
         ######################## HMI pre-start ###################################
         # Create hmi files
@@ -1303,7 +1325,7 @@ class Sceptre(AppBase):
             hmi_scada_ips = []
             if "connected_scadas" in hmi.metadata:
                 for hmi_scada_server in hmi.metadata.connected_scadas:
-                    for scada_server in scada_servers: 
+                    for scada_server in scada_servers:
                         if hmi_scada_server == scada_server.hostname:
                             hmi_scada_ips.append(scada_server.topology.network.interfaces[0].address)
             else:
@@ -1313,21 +1335,17 @@ class Sceptre(AppBase):
                     for scada_ip in scada_ips:
                         if scada_ip.split('.')[:-1] == hmi_ip.split('.')[:-1]:
                             hmi_scada_ips.append(scada_ip)
-                    
+
             hmi_directory = f"{self.sceptre_dir}/{hmi.hostname}"
             os.makedirs(hmi_directory, exist_ok=True)
 
             # Write HMI startup script injection
-            hmi_mako = "hmi.mako"
-            auto_hmi = f"{hmi_directory}/hmi.ps1"
-            with open(auto_hmi, "w") as file_:
-                utils.mako_serve_template(
-                    hmi_mako,
-                    self.mako_path,
-                    file_,
-                    scada_ips=hmi_scada_ips,
-                    hmi_ip=hmi_ip,
-                )
+            self.render(
+                "hmi.mako",
+                f"{hmi_directory}/hmi.ps1",
+                scada_ips=hmi_scada_ips,
+                hmi_ip=hmi_ip,
+            )
 
         ######################## Engineer Workstation pre-start ###################################
         # Create engineer workstation files
@@ -1337,7 +1355,7 @@ class Sceptre(AppBase):
             "engineer-workstation"
         )
 
-        #get rtus that engineer workstation can connect to. Connect to all if none given. 
+        # get rtus that engineer workstation can connect to. Connect to all if none given.
         for engineer_workstation in engineer_workstations:
             eng_fd = []
             if "connected_rtus" in engineer_workstation.metadata:
@@ -1354,30 +1372,22 @@ class Sceptre(AppBase):
             )
             os.makedirs(engineer_directory, exist_ok=True)
 
-            # Wrtie engineer workstation putty injection
-            putty = f"{engineer_directory}/putty.ps1"
-            engineer_mako = "putty.mako"
-            with open(putty, "w") as file_:
-                utils.mako_serve_template(
-                    engineer_mako,
-                    self.mako_path,
-                    file_,
-                    scada_ips=scada_ips,
-                    eng_fd=eng_fd,
-                )
+            # Write engineer workstation putty injection
+            self.render(
+                "putty.mako",
+                f"{engineer_directory}/putty.ps1",
+                scada_ips=scada_ips,
+                eng_fd=eng_fd,
+            )
 
-            #automation script to actively create putty connection
+            # automation script to actively create putty connection
             if "connect_interval" in engineer_workstation.metadata:
-                auto_winscp = f"{engineer_directory}/auto_winscp.ps1"
-                auto_winscp_mako = "auto_winscp.mako"
-                with open(auto_winscp, "w") as file_:
-                    utils.mako_serve_template(
-                        auto_winscp_mako,
-                        self.mako_templates_path,
-                        file_,
-                        eng_fd=eng_fd,
-                        connect_interval=engineer_workstation.metadata.connect_interval
-                    )
+                self.render(
+                    "auto_winscp.mako",
+                    f"{engineer_directory}/auto_winscp.ps1",
+                    eng_fd=eng_fd,
+                    connect_interval=engineer_workstation.metadata.connect_interval
+                )
 
 
         ######################## Historian pre-start ###################################
@@ -1417,7 +1427,7 @@ class Sceptre(AppBase):
 
             iface = historian_ifaces[0]
             hist_ip = iface.address
-            
+
             # Get the IP address and OPC config object associated with the OPC system that
             # is on the same subnet as this historian instance
             opc_config_ip = ""
@@ -1471,26 +1481,21 @@ class Sceptre(AppBase):
                     )
 
             # Write historian config file injection
-            historian_config_file = f"{historian_directory}/historian_config.txt"
-            with open(historian_config_file, "w") as file_:
-                utils.mako_serve_template(
-                    "historian_config.mako",
-                    self.mako_path,
-                    file_,
-                    hist_config=hist_config,
-                    hist_name=historian.hostname,
-                )
+            self.render(
+                "historian_config.mako",
+                f"{historian_directory}/historian_config.txt",
+                hist_config=hist_config,
+                hist_name=historian.hostname,
+            )
 
             # Write historian startup script file injection
-            historian_file = f"{historian_directory}/historian.ps1"
-            with open(historian_file, "w") as file_:
-                utils.mako_serve_template(
-                    "historian.mako",
-                    self.mako_path,
-                    file_,
-                    hist_config=hist_config,
-                    historian_name=historian.hostname.upper(),
-                )
+            self.render(
+                "historian.mako",
+                f"{historian_directory}/historian.ps1",
+                hist_config=hist_config,
+                historian_name=historian.hostname.upper(),
+            )
+
         logger.log('INFO', f"Completed pre_start for user application: {self.name}...")
 
 
@@ -1529,7 +1534,7 @@ class SceptreMetadataParser():
         register_map = {}
         config_path = topo_dir + topology + ".json"
 
-        logger.log('DEBUG', "Retriving register mapping from %s" % register_map)
+        logger.log('DEBUG', f"Retriving register mapping from {register_map}")
 
         with open(config_path) as topo:
             config = json.load(topo)

@@ -3,6 +3,9 @@ import phenix_apps.apps.sceptre.configs.infrastructures as infra
 
 
 def get_fdconfig_class(infrastructure: str) -> type:
+    # no reason for this to be case-sensitive
+    infrastructure = infrastructure.lower().strip()
+
     if infrastructure == 'power-transmission':
         base_class = infra.PowerTransmissionInfrastructure
     elif infrastructure == 'power-distribution':
@@ -15,6 +18,8 @@ def get_fdconfig_class(infrastructure: str) -> type:
         base_class = infra.FuelInfrastructure
     elif infrastructure == 'rtds':
         base_class = infra.RTDSInfrastructure
+    elif infrastructure == 'opalrt':
+        base_class = infra.OPALRTInfrastructure
     elif infrastructure == 'waterway':
         base_class = infra.WaterwayInfrastructure
     elif infrastructure == 'battery':
