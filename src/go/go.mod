@@ -13,7 +13,7 @@ require (
 )
 
 require (
-	github.com/activeshadow/libminimega v0.0.0-20190412123224-5384445d4b63 // indirect
+	github.com/activeshadow/libminimega v0.0.0-20230607190319-9d6487572f76 // indirect
 	github.com/activeshadow/structs v1.3.0 // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.0.0 // indirect
@@ -44,9 +44,9 @@ require (
 	go.uber.org/zap v1.15.0 // indirect
 	go4.org/intern v0.0.0-20211027215823-ae77deb06f29 // indirect
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20230525183740-e7c30c78aeb2 // indirect
-	golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f // indirect
+	golang.org/x/net v0.1.0 // indirect
 	golang.org/x/sys v0.1.0 // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/text v0.4.0 // indirect
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
 	google.golang.org/grpc v1.27.0 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
